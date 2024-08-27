@@ -101,16 +101,22 @@ async function handleSearch(city) {
 async function getCityFromCoordinates(lat, lon) {
   try {
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/reverse?lat=${lat}&lon=${lon}&appid=${apiKey}&units=${units}&lang=${lang}`
+      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&appid=${apiKey}&units=${units}&lang=${lang}`
     );
     if (!response.ok) throw new Error(`Error en reverse geocoding`);
-    const [data] = await response.json();
-    return data.name || Promise.reject("No se pudo obtener la ciudad.");
+
+    const data = await response.json();
+    if (data.length === 0 || !data[0].name) {
+      throw new Error("No se pudo obtener la ciudad.");
+    }
+
+    return data[0].name;
   } catch (error) {
     console.error("Error en getCityFromCoordinates:", error);
     alert(`No se pudo obtener la ciudad. Detalles: ${error.message}`);
   }
 }
+
 
 async function handleLocation() {
   if (navigator.geolocation) {
