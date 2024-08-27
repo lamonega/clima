@@ -118,6 +118,7 @@ async function getCityFromCoordinates(lat, lon) {
 }
 
 
+
 async function handleLocation() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
