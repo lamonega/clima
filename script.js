@@ -101,7 +101,7 @@ async function handleSearch(city) {
 async function getCityFromCoordinates(lat, lon) {
   try {
     const response = await fetch(
-      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&appid=${apiKey}&units=${units}&lang=${lang}`
+      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&appid=${apiKey}`
     );
     if (!response.ok) throw new Error(`Error en reverse geocoding`);
 
@@ -116,6 +116,7 @@ async function getCityFromCoordinates(lat, lon) {
     alert(`No se pudo obtener la ciudad. Detalles: ${error.message}`);
   }
 }
+
 
 
 
