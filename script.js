@@ -1,147 +1,107 @@
-const apiKey = "33911ea4c2075ba643aa1de60870e461";
-const lang = "es";
-const units = "metric";
+// Configuración básica
+const API_KEY = "33911ea4c2075ba643aa1de60870e461";
+const BASE_URL = "https://api.openweathermap.org/data/2.5";
 
-const elements = {
-  cityInput: document.querySelector(".city-input"),
-  searchBtn: document.querySelector(".search-btn"),
-  locationBtn: document.querySelector(".location-btn"),
-  weatherInfoSection: document.querySelector(".weather-info"),
-  notFoundSection: document.querySelector(".not-found"),
-  searchCitySection: document.querySelector(".search-city"),
-  countryTxt: document.querySelector(".country-txt"),
-  tempTxt: document.querySelector(".temp-txt"),
-  conditionTxt: document.querySelector(".condition-txt"),
-  humidityValueTxt: document.querySelector(".humidity-value-txt"),
-  windValueTxt: document.querySelector(".wind-value-txt"),
-  weatherSummaryImg: document.querySelector(".weather-summary-img"),
-  currentDateTxt: document.querySelector(".current-date-txt"),
-  forecastItemsContainer: document.querySelector(".forecast-items-container"),
-};
+// Elementos del DOM
+const cityInput = document.querySelector(".city-input");
+const searchBtn = document.querySelector(".search-btn");
+const locationBtn = document.querySelector(".location-btn");
+const weatherInfo = document.querySelector(".weather-info");
+const notFound = document.querySelector(".not-found");
+const searchCity = document.querySelector(".search-city");
 
-elements.searchBtn.addEventListener("click", () =>
-  handleSearch(elements.cityInput.value.trim())
-);
-elements.cityInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") handleSearch(elements.cityInput.value.trim());
+// Event Listeners
+searchBtn.addEventListener("click", () => buscarClima(cityInput.value.trim()));
+cityInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") buscarClima(cityInput.value.trim());
 });
-elements.locationBtn.addEventListener("click", handleLocation);
+locationBtn.addEventListener("click", usarUbicacion);
 
-async function fetchWeatherData(endpoint, city) {
+// Función principal para buscar el clima
+async function buscarClima(ciudad) {
+  if (!ciudad) return;
+
   try {
-    const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/${endpoint}?q=${city}&appid=${apiKey}&units=${units}&lang=${lang}`
-    );
-    if (!response.ok) throw new Error(`Error en ${endpoint}`);
-    return response.json();
-  } catch (error) {
-    console.error(`Error en fetchWeatherData (${endpoint}):`, error);
-    alert("Error al obtener los datos del clima.");
+    const clima = await obtenerDatos(`${BASE_URL}/weather?q=${ciudad}&appid=${API_KEY}&units=metric&lang=es`);
+    const pronostico = await obtenerDatos(`${BASE_URL}/forecast?q=${ciudad}&appid=${API_KEY}&units=metric&lang=es`);
+    
+    mostrarClima(clima);
+    mostrarPronostico(pronostico);
+    mostrarSeccion(weatherInfo);
+    
+    cityInput.value = "";
+    cityInput.blur();
+  } catch {
+    mostrarSeccion(notFound);
   }
 }
 
-function displayWeather({ name, main, weather, wind }) {
-  elements.countryTxt.textContent = name;
-  elements.tempTxt.textContent = `${Math.round(main.temp)} °C`;
-  elements.conditionTxt.textContent = weather[0].description;
-  elements.humidityValueTxt.textContent = `${main.humidity}%`;
-  elements.windValueTxt.textContent = `${wind.speed} m/s`;
-  elements.weatherSummaryImg.src = `https://openweathermap.org/img/wn/${weather[0].icon}@2x.png`;
-  elements.currentDateTxt.textContent = new Date().toLocaleDateString("es-ES", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
+// Funciones auxiliares
+async function obtenerDatos(url) {
+  const respuesta = await fetch(url);
+  if (!respuesta.ok) throw new Error("Error en la petición");
+  return respuesta.json();
 }
 
-async function updateWeatherInfo(city) {
-  const weatherData = await fetchWeatherData("weather", city);
-  if (weatherData.cod === 200) {
-    displayWeather(weatherData);
-    await updateForecastsInfo(city);
-    showSection(elements.weatherInfoSection);
-  } else {
-    showSection(elements.notFoundSection);
-  }
+function mostrarClima(datos) {
+  document.querySelector(".country-txt").textContent = datos.name;
+  document.querySelector(".temp-txt").textContent = `${Math.round(datos.main.temp)} °C`;
+  document.querySelector(".condition-txt").textContent = datos.weather[0].description;
+  document.querySelector(".humidity-value-txt").textContent = `${datos.main.humidity}%`;
+  document.querySelector(".wind-value-txt").textContent = `${datos.wind.speed} m/s`;
+  document.querySelector(".weather-summary-img").src = 
+    `https://openweathermap.org/img/wn/${datos.weather[0].icon}@2x.png`;
+  document.querySelector(".current-date-txt").textContent = 
+    new Date().toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "short" });
 }
 
-async function updateForecastsInfo(city) {
-  const forecastData = await fetchWeatherData("forecast", city);
-  elements.forecastItemsContainer.innerHTML =
-    forecastData.list
-      .filter(
-        ({ dt_txt }) =>
-          dt_txt.includes("12:00:00") &&
-          !dt_txt.includes(new Date().toISOString().split("T")[0])
-      )
-      .map(
-        ({ dt_txt, weather, main }) => `
+function mostrarPronostico(datos) {
+  const pronosticos = datos.list
+    .filter(item => item.dt_txt.includes("12:00:00"))
+    .slice(0, 5)
+    .map(item => `
       <div class="forecast-item">
-        <h5 class="forecast-item-date regular-txt">${new Date(
-          dt_txt
-        ).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}</h5>
-        <img src="https://openweathermap.org/img/wn/${
-          weather[0].icon
-        }@2x.png" class="forecast-item-img" />
-        <h5 class="forecast-item-temp">${Math.round(main.temp)} °C</h5>
+        <h5 class="forecast-item-date regular-txt">
+          ${new Date(item.dt_txt).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })}
+        </h5>
+        <img 
+          src="https://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png" 
+          class="forecast-item-img" 
+          alt="Clima"
+        />
+        <h5 class="forecast-item-temp">${Math.round(item.main.temp)} °C</h5>
       </div>
-    `
-      )
-      .join("") || "<p>Error al cargar pronósticos.</p>";
+    `).join("");
+
+  document.querySelector(".forecast-items-container").innerHTML = pronosticos;
 }
 
-async function handleSearch(city) {
-  if (city) {
-    await updateWeatherInfo(city);
-    elements.cityInput.value = "";
-    elements.cityInput.blur();
+async function usarUbicacion() {
+  if (!navigator.geolocation) {
+    alert("Tu navegador no soporta geolocalización");
+    return;
   }
-}
 
-async function getCityFromCoordinates(lat, lon) {
   try {
-    const response = await fetch(
-      `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&appid=${apiKey}`
-    );
-    if (!response.ok) throw new Error(`Error en reverse geocoding`);
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject);
+    });
 
-    const data = await response.json();
-    if (data.length === 0 || !data[0].name) {
-      throw new Error("No se pudo obtener la ciudad.");
+    const { latitude, longitude } = position.coords;
+    const respuesta = await fetch(
+      `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
+    );
+    
+    const datos = await respuesta.json();
+    if (datos[0]?.name) {
+      buscarClima(datos[0].name);
     }
-
-    return data[0].name;
-  } catch (error) {
-    console.error("Error en getCityFromCoordinates:", error);
-    alert(`No se pudo obtener la ciudad. Detalles: ${error.message}`);
+  } catch {
+    alert("No se pudo obtener tu ubicación");
   }
 }
 
-
-
-
-async function handleLocation() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords: { latitude, longitude } }) => {
-        const city = await getCityFromCoordinates(latitude, longitude);
-        if (city) await updateWeatherInfo(city);
-      },
-      (error) => {
-        console.error("Error al obtener la ubicación:", error);
-        alert("No se pudo obtener la ubicación.");
-      }
-    );
-  } else {
-    alert("La geolocalización no está soportada en este navegador.");
-  }
-}
-
-function showSection(section) {
-  [
-    elements.weatherInfoSection,
-    elements.searchCitySection,
-    elements.notFoundSection,
-  ].forEach((sec) => (sec.style.display = "none"));
-  section.style.display = "flex";
+function mostrarSeccion(seccion) {
+  [weatherInfo, searchCity, notFound].forEach(s => s.style.display = "none");
+  seccion.style.display = "flex";
 }
